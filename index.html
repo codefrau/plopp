@@ -14,7 +14,28 @@
 <body>
     <canvas id="sqCanvas" width="800" height="600"></canvas>
     <div id="sqSpinner"><div></div></div>
+    <div id="start" class="overlay">
+        <b>Click to start Plopp</b><br>
+        <br>
+        <img id="logo" src="plopp.png"><br>
+        <br>
+        Note: The initial wait might be quite long.<br>
+        <br>
+        Plopp is a Squeak Smalltalk application
+        developed by impara GmbH in 2006.<br>
+        This is a port to the web by Vanessa Freudenberg.<br>
+    </div>
+    <div id="continue" class="overlay">
+        <b>Click to continue</b><br>
+        <br>
+        <img id="logo" src="plopp.png"><br>
+    </div>
+    <script src="plopp-mpeg3-plugin.js"></script>
     <script>
+        // the main reason for requiring a click
+        // is to allow video to play
+        start.onclick = function() {
+            start.style.display = "none";
             Squeak.debugFiles = true;
              // disable fsck
             Squeak.fsck = function() {};
@@ -37,6 +58,7 @@
                 root: "/Plopp",
                 templates: { "/Plopp": "." },
             });
+        };
     </script>
 </body>
 </html>
