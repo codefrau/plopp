@@ -48,16 +48,16 @@ function PloppMpeg3Plugin() {
                 // on Safari, user will have to click it
             } catch (err) {};
             this.vm.freeze(function(unfreeze) {
-                video.addEventListener('playing',
+                video.addEventListener('timeupdate',
                     function () {
+                        if (video.currentTime < 0.1) return; // not playing yet
                         button.style.display = "none";
-                        if (!unfreeze) return; // already failed
+                        if (!unfreeze) return; // already failed or started
                         console.log("primitiveMPEG3Open: " + video.videoWidth + "x" + video.videoHeight + ", " + video.duration + "s " + video.src);
                         // continue
                         unfreeze();
                         unfreeze = null; // don't unfreeze twice
                     },
-                    { once: true }
                 );
                 video.onerror = function (err) {
                     if (!unfreeze) return; // too late
