@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Plopp</title>
+    <link rel="icon" type="image/png" href="plopp.png">
+    <link rel="apple-touch-icon" href="plopp.png" sizes="152x152">
+    <meta name="viewport" content="minimum-scale=1,maximum-scale=1,width=device-width">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileImage" content="plopp.png">
+    <link rel="stylesheet" href="plopp.css">
+    <script type="module" src="squeak.js"></script>
+</head>
+<body>
+    <canvas id="sqCanvas" width="800" height="600"></canvas>
+    <div id="sqSpinner"><div></div></div>
+    <script>
+            var url = "plopp.image";
+            SqueakJS.runSqueak(url, sqCanvas, {
+                appName: "Plopp",
+                fixedWidth: 800,
+                fixedHeight: 600,
+                fullscreen: true,
+                spinner: sqSpinner,
+                root: "/Plopp",
+                templates: { "/Plopp": "." },
+            });
+    </script>
+</body>
+</html>
