@@ -15,6 +15,18 @@
     <canvas id="sqCanvas" width="800" height="600"></canvas>
     <div id="sqSpinner"><div></div></div>
     <script>
+            Squeak.debugFiles = true;
+             // disable fsck
+            Squeak.fsck = function() {};
+            // pretend to be unix
+            Squeak.platformName = "unix";
+            // pretend to have an FFI libc
+            Squeak.registerExternalModule('', {
+                getenv(v) {
+                    if (v === "HOME") return "/Plopp/user";
+                    return null;
+                },
+            });
             var url = "plopp.image";
             SqueakJS.runSqueak(url, sqCanvas, {
                 appName: "Plopp",
