@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="msapplication-TileImage" content="plopp.png">
     <link rel="stylesheet" href="plopp.css">
-    <script type="module" src="squeak.js"></script>
+    <script type="module" src="../squeak.js"></script>
 </head>
 <body>
     <canvas id="sqCanvas" width="800" height="600"></canvas>
@@ -31,13 +31,16 @@
         <img id="logo" src="plopp.png"><br>
     </div>
     <script src="plopp-mpeg3-plugin.js"></script>
+    <script src="plopp-b3daccel-plugin.js"></script>
+    <script src="plopp-b3dengine-plugin.js"></script>
+    <script src="plopp-opengl.js"></script>
     <script>
         // the main reason for requiring a click
         // is to allow video to play
         start.onclick = function() {
             start.style.display = "none";
             Squeak.debugFiles = true;
-             // disable fsck
+             // disable fsck (has trouble with templates)
             Squeak.fsck = function() {};
             // pretend to be unix
             Squeak.platformName = "unix";
