@@ -46,6 +46,7 @@
             Squeak.platformName = "unix";
             // pretend to have an FFI libc
             Squeak.registerExternalModule('', {
+                getModuleName: function() { return 'libc.so'; },
                 getenv(v) {
                     if (v === "HOME") return "/Plopp/user";
                     return null;

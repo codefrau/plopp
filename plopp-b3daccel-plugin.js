@@ -1,20 +1,37 @@
 function B3DAcceleratorPlugin() {
     "use strict";
 
+    /* Renderer creation flags:
+        B3D_SOFTWARE_RENDERER: Enable use of software renderers
+        B3D_HARDWARE_RENDERER: Enable use of hardware renderers
+        B3D_STENCIL_BUFFER:    Request stencil buffer
+        B3D_ANTIALIASING:      Request antialiasing in the renderer.
+        B3D_STEREO:            Request stereo visual from the renderer
+        B3D_SYNCVBL:           Request VBL sync
+        More flags may be added - if they are not supported by the platform
+        code the creation primitive should fail.
+    */
+    var B3D_SOFTWARE_RENDERER = 0x0001;
+    var B3D_HARDWARE_RENDERER = 0x0002;
+    var B3D_STENCIL_BUFFER    = 0x0004;
+    var B3D_ANTIALIASING      = 0x0008;
+    var B3D_STEREO            = 0x0010;
+    var B3D_SYNCVBL           = 0x0020;
+
     return {
-        getModuleName: function () { return 'B3DAcceleratorPlugin'; },
+        getModuleName: function() { return 'B3DAcceleratorPlugin'; },
         interpreterProxy: null,
         primHandler: null,
 
         webglContext: null, // accessed by OpenGL plugin
 
-        setInterpreter: function (anInterpreter) {
+        setInterpreter: function(anInterpreter) {
             this.interpreterProxy = anInterpreter;
             this.primHandler = this.interpreterProxy.vm.primHandler;
             return true;
         },
 
-        primitiveSetVerboseLevel: function (argCount) {
+        primitiveSetVerboseLevel: function(argCount) {
             if (argCount !== 1) return false;
             var level = this.interpreterProxy.stackIntegerValue(0);
             console.log("B3DAccel: primitiveSetVerboseLevel", level);
@@ -22,7 +39,7 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        primitiveCreateRendererFlags: function (argCount) {
+        primitiveCreateRendererFlags: function(argCount) {
             if (argCount !== 5) return false;
             var h = this.interpreterProxy.stackIntegerValue(0);
             var w = this.interpreterProxy.stackIntegerValue(1);
@@ -30,6 +47,8 @@ function B3DAcceleratorPlugin() {
             var x = this.interpreterProxy.stackIntegerValue(3);
             var flags = this.interpreterProxy.stackIntegerValue(4);
             console.log("B3DAccel: primitiveCreateRendererFlags", x, y, w, h, flags);
+            if (flags & ~(B3D_HARDWARE_RENDERER | B3D_SOFTWARE_RENDERER | B3D_STENCIL_BUFFER))
+                return false;
             // create WebGL canvas
             var canvas = document.createElement("canvas");
             canvas.width = w;
@@ -37,7 +56,9 @@ function B3DAcceleratorPlugin() {
             canvas.style.position = "absolute";
             canvas.style.backgroundColor = "transparent";
             document.body.appendChild(canvas);
-            var context = canvas.getContext("webgl");
+            var options = { depth: true, alpha: false, antialias: true };
+            if (flags & B3D_STENCIL_BUFFER) options.stencil = true;
+            var context = canvas.getContext("webgl", options);
             if (!context) return false;
             // set context globally for OpenGL plugin
             this.webglContext = context;
@@ -48,7 +69,7 @@ function B3DAcceleratorPlugin() {
             return this.primHandler.popNandPushIfOK(argCount + 1, handle);
         },
 
-        primitiveDestroyRenderer: function (argCount) {
+        primitiveDestroyRenderer: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             console.log("B3DAccel: primitiveDestroyRenderer", handle);
@@ -56,7 +77,7 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        primitiveGetRendererSurfaceHandle: function (argCount) {
+        primitiveGetRendererSurfaceHandle: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             console.log("B3DAccel: primitiveGetRendererSurfaceHandle", handle);
@@ -64,16 +85,16 @@ function B3DAcceleratorPlugin() {
             return this.primHandler.popNandPushIfOK(argCount + 1, surface);
         },
 
-        primitiveGetIntProperty: function (argCount) {
+        primitiveGetIntProperty: function(argCount) {
             if (argCount !== 2) return false;
             var property = this.interpreterProxy.stackIntegerValue(0);
             var handle = this.interpreterProxy.stackIntegerValue(1);
             console.log("B3DAccel: primitiveGetIntProperty", handle, property);
-            var value = 424242;
+            var value = this.b3dxGetIntProperty(handle, property);
             return this.primHandler.popNandPushIfOK(argCount + 1, value);
         },
 
-        primitiveGetRendererSurfaceWidth: function (argCount) {
+        primitiveGetRendererSurfaceWidth: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             var width = 800;
@@ -81,7 +102,7 @@ function B3DAcceleratorPlugin() {
             return this.primHandler.popNandPushIfOK(argCount + 1, width);
         },
 
-        primitiveGetRendererSurfaceHeight: function (argCount) {
+        primitiveGetRendererSurfaceHeight: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             var height = 600;
@@ -89,7 +110,7 @@ function B3DAcceleratorPlugin() {
             return this.primHandler.popNandPushIfOK(argCount + 1, height);
         },
 
-        primitiveGetRendererSurfaceDepth: function (argCount) {
+        primitiveGetRendererSurfaceDepth: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             var depth = 32;
@@ -97,7 +118,7 @@ function B3DAcceleratorPlugin() {
             return this.primHandler.popNandPushIfOK(argCount + 1, depth);
         },
 
-        primitiveGetRendererColorMasks: function (argCount) {
+        primitiveGetRendererColorMasks: function(argCount) {
             if (argCount !== 2) return false;
             var array = this.interpreterProxy.stackObjectValue(0);
             var handle = this.interpreterProxy.stackIntegerValue(1);
@@ -111,7 +132,7 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        primitiveSetViewport: function (argCount) {
+        primitiveSetViewport: function(argCount) {
             if (argCount !== 5) return false;
             var h = this.interpreterProxy.stackIntegerValue(0);
             var w = this.interpreterProxy.stackIntegerValue(1);
@@ -124,7 +145,7 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        primitiveSetTransform: function (argCount) {
+        primitiveSetTransform: function(argCount) {
             if (argCount !== 3) return false;
             var handle = this.interpreterProxy.stackIntegerValue(2);
             var modelViewMatrix = this.stackMatrix(1);
@@ -136,7 +157,7 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        primitiveSetLights: function (argCount) {
+        primitiveSetLights: function(argCount) {
             if (argCount !== 2) return false;
             var handle = this.interpreterProxy.stackIntegerValue(1);
             var lightArray = this.interpreterProxy.stackObjectValue(0);
@@ -153,7 +174,7 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        primitiveSetMaterial: function (argCount) {
+        primitiveSetMaterial: function(argCount) {
             if (argCount !== 2) return false;
             var handle = this.interpreterProxy.stackIntegerValue(1);
             var material = this.stackMaterialValue(0);
@@ -163,46 +184,105 @@ function B3DAcceleratorPlugin() {
             return true;
         },
 
-        b3dxSetViewport: function (handle, x, y, w, h) {
+        primitiveSwapRendererBuffers: function(argCount) {
+            if (argCount !== 1) return false;
+            var handle = this.interpreterProxy.stackIntegerValue(0);
+            console.log("B3DAccel: primitiveSwapRendererBuffers", handle);
+            // let browser display the rendered frame
+            this.interpreterProxy.vm.breakNow();
+            debugger;
+            this.interpreterProxy.pop(argCount);
+            return true;
+        },
+
+        b3dxSetViewport: function(handle, x, y, w, h) {
             console.log("B3DAccel: b3dxSetViewport", handle, x, y, w, h);
         },
 
-        b3dxSetTransform: function (handle, projectionMatrix, modelViewMatrix) {
+        b3dxSetTransform: function(handle, projectionMatrix, modelViewMatrix) {
             console.log("B3DAccel: b3dxSetTransform", handle, projectionMatrix, modelViewMatrix);
         },
 
-        b3dxDisableLights: function (handle) {
+        b3dxDisableLights: function(handle) {
             console.log("B3DAccel: b3dxDisableLights", handle);
             return true;
         },
 
-        b3dxLoadLight: function (handle, index, light) {
+        b3dxLoadLight: function(handle, index, light) {
             console.log("B3DAccel: b3dxLoadLight", handle, index, light);
             return true;
         },
 
-        b3dxLoadMaterial: function (handle, material) {
+        b3dxLoadMaterial: function(handle, material) {
             console.log("B3DAccel: b3dxLoadMaterial", handle, material);
             return true;
         },
 
-        fetchLightSource: function (index, lightArray) {
+        b3dxGetIntProperty: function(handle, prop) {
+            console.log("B3DAccel: b3dxGetIntProperty", handle, prop);
+            // switch (prop) {
+            //     case 1: /* backface culling */
+            //         if (!glIsEnabled(GL_CULL_FACE)) return 0;
+            //         glGetIntegerv(GL_FRONT_FACE, & v);
+            //         if (v == GL_CW) return 1;
+            //         if (v == GL_CCW) return -1;
+            //         return 0;
+            //     case 2: /* polygon mode */
+            //         glGetIntegerv(GL_POLYGON_MODE, & v);
+            //         ERROR_CHECK;
+            //         return v;
+            //     case 3: /* point size */
+            //         glGetIntegerv(GL_POINT_SIZE, & v);
+            //         ERROR_CHECK;
+            //         return v;
+            //     case 4: /* line width */
+            //         glGetIntegerv(GL_LINE_WIDTH, & v);
+            //         ERROR_CHECK;
+            //         return v;
+            //     case 5: /* blend enable */
+            //         return glIsEnabled(GL_BLEND);
+            //     case 6: /* blend source factor */
+            //     case 7: /* blend dest factor */
+            //         if (prop == 6)
+            //             glGetIntegerv(GL_BLEND_SRC, & v);
+            //         else
+            //             glGetIntegerv(GL_BLEND_DST, & v);
+            //         ERROR_CHECK;
+            //         switch (v) {
+            //             case GL_ZERO: return 0;
+            //             case GL_ONE: return 1;
+            //             case GL_SRC_COLOR: return 2;
+            //             case GL_ONE_MINUS_SRC_COLOR: return 3;
+            //             case GL_DST_COLOR: return 4;
+            //             case GL_ONE_MINUS_DST_COLOR: return 5;
+            //             case GL_SRC_ALPHA: return 6;
+            //             case GL_ONE_MINUS_SRC_ALPHA: return 7;
+            //             case GL_DST_ALPHA: return 8;
+            //             case GL_ONE_MINUS_DST_ALPHA: return 9;
+            //             case GL_SRC_ALPHA_SATURATE: return 10;
+            //             default: return -1;
+            //         }
+            // }
+            return 0;
+        },
+
+
+        fetchLightSource: function(index, lightArray) {
             var light = lightArray.pointers[index];
             if (!light) return null;
             console.log("B3DAccel: fetchLightSource", index, light);
             return light;
         },
 
-        stackMatrix: function (stackIndex) {
+        stackMatrix: function(stackIndex) {
             var m = this.interpreterProxy.stackObjectValue(stackIndex);
             if (!m.words || m.words.length !== 16) return null;
             return m.wordsAsFloat32Array();
         },
 
-        stackMaterialValue: function (stackIndex) {
+        stackMaterialValue: function(stackIndex) {
             var material = this.interpreterProxy.stackObjectValue(stackIndex);
-            if (!material) return null;
-            console.log("B3DAccel: stackMaterialValue", material);
+            if (!material.pointers) return null;
             return material;
         },
 

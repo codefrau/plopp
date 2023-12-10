@@ -100,6 +100,32 @@ function B3DEnginePlugin() {
             return true;
         },
 
+        b3dTransformDirection: function(argCount) {
+            if (argCount !== 1) return false;
+            console.log("Squeak3D: b3dTransformDirection");
+            var v3Oop = this.interpreterProxy.stackObjectValue(0);
+            if (this.interpreterProxy.failed()) return false;
+            if (!v3Oop.words || v3Oop.words.length !== 3) return false;
+            var matrix = this.stackMatrix(1);
+            if (!matrix) return false;
+            var vertex = v3Oop.wordsAsFloat32Array();
+            var x = vertex[0];
+            var y = vertex[1];
+            var z = vertex[2];
+            var rx = x * matrix[0] + y * matrix[1] + z * matrix[2];
+            var ry = x * matrix[4] + y * matrix[5] + z * matrix[6];
+            var rz = x * matrix[8] + y * matrix[9] + z * matrix[10];
+            v3Oop = this.interpreterProxy.clone(v3Oop);
+            if (!v3Oop) return false;
+            vertex = v3Oop.wordsAsFloat32Array();
+            vertex[0] = rx;
+            vertex[1] = ry;
+            vertex[2] = rz;
+            this.interpreterProxy.pop(2);
+            this.interpreterProxy.push(v3Oop);
+            return true;
+        },
+
         b3dTransformMatrixWithInto: function(argCount) {
             if (argCount !== 3) return false;
             var m3 = this.stackMatrix(0);
@@ -108,10 +134,14 @@ function B3DEnginePlugin() {
             if (!m1 || !m2 || !m3) return false;
             console.log("Squeak3D: b3dTransformMatrixWithInto");
             for (var row = 0; row < 16; row += 4) {
-                m3[row+0] = m1[row+0] * m2[0] + m1[row+1] * m2[4] + m1[row+2] * m2[8] + m1[row+3] * m2[12];
-                m3[row+1] = m1[row+0] * m2[1] + m1[row+1] * m2[5] + m1[row+2] * m2[9] + m1[row+3] * m2[13];
-                m3[row+2] = m1[row+0] * m2[2] + m1[row+1] * m2[6] + m1[row+2] * m2[10] + m1[row+3] * m2[14];
-                m3[row+3] = m1[row+0] * m2[3] + m1[row+1] * m2[7] + m1[row+2] * m2[11] + m1[row+3] * m2[15];
+                var c0 = m1[row+0] * m2[0] + m1[row+1] * m2[4] + m1[row+2] * m2[8] + m1[row+3] * m2[12];
+                var c1 = m1[row+0] * m2[1] + m1[row+1] * m2[5] + m1[row+2] * m2[9] + m1[row+3] * m2[13];
+                var c2 = m1[row+0] * m2[2] + m1[row+1] * m2[6] + m1[row+2] * m2[10] + m1[row+3] * m2[14];
+                var c3 = m1[row+0] * m2[3] + m1[row+1] * m2[7] + m1[row+2] * m2[11] + m1[row+3] * m2[15];
+                m3[row+0] = c0;
+                m3[row+1] = c1;
+                m3[row+2] = c2;
+                m3[row+3] = c3;
             }
             this.interpreterProxy.pop(argCount);
             return true;
