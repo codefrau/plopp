@@ -1,3 +1,20 @@
+// This is a minimal OpenGL 1.0 implementation for SqueakJS
+// using WebGL.
+
+// It is very much incomplete and currently only implements
+// the subset of OpenGL that is used by Plopp, but could be
+// extended to support more.
+
+// The functions are invoked via FFI, which takes care of
+// converting the arguments and return values between JS
+// and Smalltalk.
+
+// Just like in regular Squeak, the OpenGL context is global
+// and created by B3DAcceleratorPlugin.
+
+// helpful constant lookup:
+// https://javagl.github.io/GLConstantsTranslator/GLConstantsTranslator.html
+
 function OpenGL() {
     "use strict";
 
@@ -49,6 +66,9 @@ function OpenGL() {
         0, 0, 0, 1,
     ]);
 
+    // OpenGL constants missing in WebGL
+    var GL_ALPHA_TEST = 3008;
+    var GL_BGRA = 32993;
     var GL_LIGHTING = 2896;
     var GL_LIGHT0 = 16384;
     var GL_LIGHT1 = 16385;
@@ -58,20 +78,33 @@ function OpenGL() {
     var GL_LIGHT5 = 16389;
     var GL_LIGHT6 = 16390;
     var GL_LIGHT7 = 16391;
+    var GL_LIST_INDEX = 2867;
     var GL_TEXTURE_COMPRESSED = 34465;
+    var GL_QUADS = 7;
+    var GL_QUAD_STRIP = 8;
+    var GL_POLYGON = 9;
+    var GL_UNPACK_LSB_FIRST = 3313;
+    var GL_UNPACK_ROW_LENGTH = 3314;
+    var GL_UNPACK_SKIP_ROWS = 3315;
+    var GL_UNPACK_SKIP_PIXELS = 3316;
 
+    // Primitive attributes for glBegin/glEnd
     var HAS_NORMAL = 1;
     var HAS_COLOR = 2;
     var HAS_TEXCOORD = 4;
 
-    // Emulate OpenGL state
+    // Emulated OpenGL state
     var gl = {
+        alphaTest: false,
+        alphaFunc: null,
+        alphaRef: 0,
         extensions: "ARB_texture_non_power_of_two SGIS_generate_mipmap",
         color: new Float32Array(4),
         normal: new Float32Array([0, 0, 1]),
         texCoord: new Float32Array(2),
         primitive: null, // for glBegin/glEnd
         primitiveAttrs: 0, // for glVertex
+        shaders: {}, // shader programs by vertex attributes
         matrix: null, // current matrix (modelView or projection)
         modelView: new Float32Array(identity),
         projection: new Float32Array(identity),
@@ -84,6 +117,9 @@ function OpenGL() {
         textureUnits: [], // texture unit state
         listId: 0, // display list id generator
         lists: {}, // display lists by id
+        pixelStoreUnpackRowLength: 0,
+        pixelStoreUnpackSkipRows: 0,
+        pixelStoreUnpackSkipPixels: 0,
     };
 
     var webgl; // the actual WebGL context
@@ -97,6 +133,9 @@ function OpenGL() {
             if (!B3DAcceleratorPlugin) throw Error("OpenGL: B3DAcceleratorPlugin not loaded");
             webgl = B3DAcceleratorPlugin.webglContext;
             console.log("OpenGL: got context from B3DAcceleratorPlugin", webgl);
+            var spector = new SPECTOR.Spector();
+            spector.captureContext(webgl);
+            spector.displayUI();
             // for debug access
             this.webgl = webgl;
             this.gl = gl;
@@ -105,6 +144,7 @@ function OpenGL() {
             gl.color.set([1, 1, 1, 1]);
             for (var i = 0; i < 8; i++) {
                 gl.lights[i] = {
+                    index: i,
                     enabled: false,
                     ambient: new Float32Array([0, 0, 0, 1]),
                     diffuse: new Float32Array([0, 0, 0, 1]),
@@ -122,6 +162,8 @@ function OpenGL() {
             };
             for (var i = 0; i < 8; i++) {
                 gl.textureUnits[i] = {
+                    index: i,
+                    enabled: false,
                     mipmap: false,
                 };
             }
@@ -131,7 +173,9 @@ function OpenGL() {
         // FFI functions get JS args, return JS result
 
         glAlphaFunc: function(func, ref) {
-            console.log("UNIMPLEMENTED glAlphaFunc", func, ref);
+            console.log("glAlphaFunc", func, ref);
+            gl.alphaFunc = func;
+            gl.alphaRef = ref;
         },
 
         glBegin: function(mode) {
@@ -150,7 +194,7 @@ function OpenGL() {
             var texture = gl.textures[texture];
             if (!texture) throw Error("OpenGL: texture not found");
             webgl.bindTexture(target, texture);
-            gl.texture = texture;
+            gl.textureUnit.texture = texture;
         },
 
         glBlendFunc: function(sfactor, dfactor) {
@@ -193,20 +237,20 @@ function OpenGL() {
 
         glEnable: function(cap) {
             switch (cap) {
-                case 2884: // GL_CULL_FACE
+                case gl.ALPHA_TEST:
+                    gl.alphaTest = true;
+                    break;
+                case webgl.BLEND:
+                    console.log("glEnable GL_BLEND");
+                    webgl.enable(webgl.BLEND);
+                    break;
+                case webgl.CULL_FACE:
                     console.log("glEnable GL_CULL_FACE");
                     webgl.enable(webgl.CULL_FACE);
                     break;
-                case GL_LIGHTING:
-                    console.log("glEnable GL_LIGHTING");
-                    gl.lighting = true;
-                    break;
-                case 2929: // GL_DEPTH_TEST
+                case webgl.DEPTH_TEST:
                     console.log("glEnable GL_DEPTH_TEST");
                     webgl.enable(webgl.DEPTH_TEST);
-                    break;
-                case webgl.TEXTURE_2D:
-                    console.log("UNIMPLEMENTED glEnable GL_TEXTURE_2D");
                     break;
                 case GL_LIGHT0:
                 case GL_LIGHT1:
@@ -219,6 +263,22 @@ function OpenGL() {
                     console.log("glEnable GL_LIGHT" + (cap - GL_LIGHT0));
                     gl.lights[cap - GL_LIGHT0].enabled = true;
                     break;
+                case GL_LIGHTING:
+                    console.log("glEnable GL_LIGHTING");
+                    gl.lighting = true;
+                    break;
+                case webgl.POLYGON_OFFSET_FILL:
+                    console.log("glEnable GL_POLYGON_OFFSET_FILL");
+                    webgl.enable(webgl.POLYGON_OFFSET_FILL);
+                    break;
+                case webgl.STENCIL_TEST:
+                    console.log("glEnable GL_STENCIL_TEST");
+                    webgl.enable(webgl.STENCIL_TEST);
+                    break;
+                case webgl.TEXTURE_2D:
+                    console.log("glEnable GL_TEXTURE_2D");
+                    gl.textureUnit.enabled = true;
+                    break;
                 default:
                     console.log("UNIMPLEMENTED glEnable", cap);
             }
@@ -228,40 +288,138 @@ function OpenGL() {
             var primitive = gl.primitive;
             gl.primitive = null;
             switch (primitive.mode) {
-                case 0: // GL_POINTS
+                case webgl.POINTS:
                     console.log("UNIMPLEMENTED glEnd GL_POINTS");
                     break;
-                case 1: // GL_LINES
+                case webgl.LINES:
                     console.log("UNIMPLEMENTED glEnd GL_LINES");
                     break;
-                case 2: // GL_LINE_LOOP
+                case webgl.LINE_LOOP:
                     console.log("UNIMPLEMENTED glEnd GL_LINE_LOOP");
                     break;
-                case 3: // GL_LINE_STRIP
+                case webgl.LINE_STRIP:
                     console.log("UNIMPLEMENTED glEnd GL_LINE_STRIP");
                     break;
-                case 4: // GL_TRIANGLES
+                case webgl.TRIANGLES:
                     console.log("UNIMPLEMENTED glEnd GL_TRIANGLES");
                     break;
-                case 5: // GL_TRIANGLE_STRIP
+                case webgl.TRIANGLE_STRIP:
                     console.log("UNIMPLEMENTED glEnd GL_TRIANGLE_STRIP");
                     break;
-                case 6: // GL_TRIANGLE_FAN
+                case webgl.TRIANGLE_FAN:
                     console.log("UNIMPLEMENTED glEnd GL_TRIANGLE_FAN");
                     break;
-                case 7: // GL_QUADS
-                    console.log("UNIMPLEMENTED glEnd GL_QUADS");
+                case GL_QUADS: // (not directly supported by WebGL)
+                    // use triangles and an index buffer to
+                    // duplicate vertices as v0-v1-v2, v2-v1-v3
+                    // we assume that all attributes are floats
+                    if (primitive.vertexAttrs !== 0) {
+                        console.log("UNIMPLEMENTED glEnd GL_QUADS", primitive.vertexAttrs);
+                        return;
+                    }
+                    console.log("glEnd GL_QUADS");
+                    // create vertex and index buffers
+                    var vertices = primitive.vertices;
+                    var size = primitive.vertexSize;
+                    var data = new Float32Array(vertices.length * size);
+                    for (var i = 0, offset = 0; i < vertices.length; i++, offset += size) {
+                        data.set(vertices[i], offset);
+                    }
+                    var indices = new Uint16Array(vertices.length * 3 / 2);
+                    offset = 0;
+                    for (var i = 0; i < vertices.length; i += 4) {
+                        indices[offset++] = i;
+                        indices[offset++] = i+1;
+                        indices[offset++] = i+2;
+                        indices[offset++] = i+2;
+                        indices[offset++] = i+1;
+                        indices[offset++] = i+3;
+                    }
+                    var vertexBuffer = webgl.createBuffer();
+                    webgl.bindBuffer(webgl.ARRAY_BUFFER, vertexBuffer);
+                    webgl.bufferData(webgl.ARRAY_BUFFER, data, webgl.DYNAMIC_DRAW);
+                    var indexBuffer = webgl.createBuffer();
+                    webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                    webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, indices, webgl.DYNAMIC_DRAW);
+                    // create shader program
+                    var shader = gl.shaders[primitive.vertexAttrs];
+                    if (!shader) {
+                        shader = gl.shaders[primitive.vertexAttrs] = {
+                            program: webgl.createProgram(),
+                            locations: null,
+                        };
+                        var vs = webgl.createShader(webgl.VERTEX_SHADER);
+                        webgl.shaderSource(vs, this.vertexShaderSource(primitive.vertexAttrs));
+                        webgl.compileShader(vs);
+                        if (!webgl.getShaderParameter(vs, webgl.COMPILE_STATUS)) {
+                            console.error("OpenGL: vertex shader compile error: " + webgl.getShaderInfoLog(vs));
+                            debugger;
+                            return;
+                        }
+                        var fs = webgl.createShader(webgl.FRAGMENT_SHADER);
+                        webgl.shaderSource(fs, this.fragmentShaderSource(primitive.vertexAttrs));
+                        webgl.compileShader(fs);
+                        if (!webgl.getShaderParameter(fs, webgl.COMPILE_STATUS)) {
+                            console.error("OpenGL: fragment shader compile error: " + webgl.getShaderInfoLog(fs));
+                            debugger;
+                            return;
+                        }
+                        webgl.attachShader(shader.program, vs);
+                        webgl.attachShader(shader.program, fs);
+                        webgl.linkProgram(shader.program);
+                        if (!webgl.getProgramParameter(shader.program, webgl.LINK_STATUS)) {
+                            console.error("OpenGL: shader link error: " + webgl.getProgramInfoLog(shader.program));
+                            debugger
+                            return;
+                        }
+                        shader.locations = this.getLocations(shader.program, primitive.vertexAttrs);
+                    }
+                    webgl.useProgram(shader.program);
+                    // set up uniforms and vertex attributes
+                    var stride = size * 4;
+                    var offset = 0;
+                    var loc = gl.shaders[primitive.vertexAttrs].locations;
+                    webgl.uniformMatrix4fv(loc['uModelView'], false, gl.modelView);
+                    webgl.uniformMatrix4fv(loc['uProjection'], false, gl.projection);
+                    webgl.vertexAttribPointer(loc['aPosition'], 3, webgl.FLOAT, false, stride, offset);
+                    webgl.enableVertexAttribArray(loc['aPosition']);
+                    offset += 12;
+                    if (loc['aNormal'] >= 0) {
+                        webgl.vertexAttribPointer(loc['aNormal'], 3, webgl.FLOAT, false, stride, offset);
+                        webgl.enableVertexAttribArray(loc['aNormal']);
+                        offset += 12;
+                    }
+                    if (loc['aColor'] >= 0) {
+                        webgl.vertexAttribPointer(loc['aColor'], 4, webgl.FLOAT, false, stride, offset);
+                        webgl.enableVertexAttribArray(loc['aColor']);
+                        offset += 16;
+                    } else if (loc['uColor']) {
+                        webgl.uniform4fv(loc['uColor'], gl.color);
+                    }
+                    if (loc['aTexCoord'] >= 0) {
+                        webgl.vertexAttribPointer(loc['aTexCoord'], 2, webgl.FLOAT, false, stride, offset);
+                        webgl.enableVertexAttribArray(loc['aTexCoord']);
+                        offset += 8;
+                    }
+                    if (loc['uSampler'] >= 0) {
+                        webgl.activeTexture(webgl.TEXTURE0 + gl.textureUnit.index);
+                        webgl.bindTexture(webgl.TEXTURE_2D, gl.textureUnit.texture);
+                        webgl.uniform1i(loc['uSampler'], gl.textureUnit.index);
+                    }
+                    // draw
+                    webgl.bindBuffer(webgl.ARRAY_BUFFER, vertexBuffer);
+                    webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                    webgl.drawElements(webgl.TRIANGLES, indices.length, webgl.UNSIGNED_SHORT, 0);
                     break;
-                case 8: // GL_QUAD_STRIP
+                case GL_QUAD_STRIP: // (not directly supported by WebGL)
                     console.log("UNIMPLEMENTED glEnd GL_QUAD_STRIP");
                     break;
-                case 9: // GL_POLYGON
+                case GL_POLYGON: // (not directly supported by WebGL)
                     console.log("UNIMPLEMENTED glEnd GL_POLYGON");
                     break;
                 default:
                     console.log("UNIMPLEMENTED glEnd", primitive.mode);
             }
-            console.log(primitive);
         },
 
         glEndList: function() {
@@ -283,17 +441,20 @@ function OpenGL() {
 
         glDisable: function(cap) {
             switch (cap) {
-                case 2884: // GL_CULL_FACE
+                case GL_ALPHA_TEST:
+                    gl.alphaTest = false;
+                    break;
+                case webgl.BLEND:
+                    console.log("glDisable GL_BLEND");
+                    webgl.disable(webgl.BLEND);
+                    break;
+                case webgl.CULL_FACE:
                     console.log("glDisable GL_CULL_FACE");
                     webgl.disable(webgl.CULL_FACE);
                     break;
-                case GL_LIGHTING:
-                    console.log("glDisable GL_LIGHTING");
-                    gl.lighting = false;
-                    break;
-                case 3042: // GL_BLEND
-                    console.log("glDisable GL_BLEND");
-                    webgl.disable(webgl.BLEND);
+                case webgl.DEPTH_TEST:
+                    console.log("glDisable GL_DEPTH_TEST");
+                    webgl.disable(webgl.DEPTH_TEST);
                     break;
                 case GL_LIGHT0:
                 case GL_LIGHT1:
@@ -305,6 +466,22 @@ function OpenGL() {
                 case GL_LIGHT7:
                     console.log("glDisable GL_LIGHT" + (cap - GL_LIGHT0));
                     gl.lights[cap - GL_LIGHT0].enabled = false;
+                    break;
+                case GL_LIGHTING:
+                    console.log("glDisable GL_LIGHTING");
+                    gl.lighting = false;
+                    break;
+                case webgl.POLYGON_OFFSET_FILL:
+                    console.log("glDisable GL_POLYGON_OFFSET_FILL");
+                    webgl.disable(webgl.POLYGON_OFFSET_FILL);
+                    break;
+                case webgl.STENCIL_TEST:
+                    console.log("glDisable GL_STENCIL_TEST");
+                    webgl.disable(webgl.STENCIL_TEST);
+                    break;
+                case webgl.TEXTURE_2D:
+                    console.log("glDisable GL_TEXTURE_2D");
+                    gl.textureUnit.enabled = false;
                     break;
                 default:
                     console.log("UNIMPLEMENTED glDisable", cap);
@@ -335,6 +512,17 @@ function OpenGL() {
             console.log("glGenTextures", n, Array.from(textures));
         },
 
+        glGetIntegerv(name, params) {
+            switch (name) {
+                case GL_LIST_INDEX:
+                    console.log("glGetIntegerv GL_LIST_INDEX");
+                    params[0] = gl.list ? gl.list.id : 0;
+                    break;
+                default:
+                    console.log("UNIMPLEMENTED glGetIntegerv", name);
+            }
+        },
+
         glGetString: function(name) {
             switch (name) {
                 case 7939: // GL_EXTENSIONS
@@ -344,6 +532,15 @@ function OpenGL() {
                     console.log("UNIMPLEMENTED glGetString", name);
             }
             return "";
+        },
+
+        glGetTexLevelParameteriv: function(target, level, pname, params) {
+            switch (pname) {
+                case GL_TEXTURE_COMPRESSED:
+                    return false;
+                default:
+                    console.log("UNIMPLEMENTED glGetTexLevelParameteriv", target, level, pname, params);
+            }
         },
 
         glIsEnabled: function(cap) {
@@ -480,11 +677,24 @@ function OpenGL() {
 
         glPixelStorei: function(pname, param) {
             switch (pname) {
-                case 3313: // GL_UNPACK_ALIGNMENT
-                    console.log("UNIMPLEMENTED glPixelStorei GL_UNPACK_ALIGNMENT", param);
+                case webgl.UNPACK_ALIGNMENT:
+                    console.log("glPixelStorei GL_UNPACK_ALIGNMENT", param);
+                    webgl.pixelStorei(webgl.UNPACK_ALIGNMENT, param);
                     break;
-                case 3317: // GL_UNPACK_ROW_LENGTH
-                    console.log("UNIMPLEMENTED glPixelStorei GL_UNPACK_ROW_LENGTH", param);
+                case GL_UNPACK_LSB_FIRST:
+                    if (param !== 0) console.log("UNIMPLEMENTED glPixelStorei GL_UNPACK_LSB_FIRST", param);
+                    break;
+                case GL_UNPACK_ROW_LENGTH:
+                    console.log("glPixelStorei GL_UNPACK_ROW_LENGTH", param);
+                    gl.pixelStoreUnpackRowLength = param;
+                    break;
+                case GL_UNPACK_SKIP_ROWS:
+                    console.log("glPixelStorei GL_UNPACK_SKIP_ROWS", param);
+                    gl.pixelStoreUnpackSkipRows = param;
+                    break;
+                case GL_UNPACK_SKIP_PIXELS:
+                    console.log("glPixelStorei GL_UNPACK_SKIP_PIXELS", param);
+                    gl.pixelStoreUnpackSkipPixels = param;
                     break;
                 default:
                     console.log("UNIMPLEMENTED glPixelStorei", pname, param);
@@ -543,23 +753,40 @@ function OpenGL() {
 
         glTexImage2D: function(target, level, internalformat, width, height, border, format, type, pixels) {
             console.log("glTexImage2D", target, level, internalformat, width, height, border, format, type, pixels);
+            // WebGL only supports GL_RGBA
+            switch (format) {
+                case webgl.GL_RGBA:
+                    break;
+                case GL_BGRA:
+                    console.warn("glTexImage2D GL_BGRA as RGBA");
+                    format = webgl.RGBA;
+                    // todo: swap bytes in shader
+                    break;
+                default:
+                    console.warn("UNIMPLEMENTED glTexImage2D format " + format);
+                    return;
+            }
+            // pixels are coming in via FFI as void* (ArrayBuffer)
+            // convert to appropriate typed array
             switch (type) {
                 case webgl.UNSIGNED_BYTE:
                     pixels = new Uint8Array(pixels);
                     break;
                 default:
-                    console.log("UNIMPLEMENTED glTexImage2D type " + type);
+                    console.warn("UNIMPLEMENTED glTexImage2D type " + type);
+                    return;
+            }
+            // WebGL does not support GL_UNPACK_ROW_LENGTH, GL_UNPACK_SKIP_ROWS, GL_UNPACK_SKIP_PIXELS
+            if (gl.pixelStoreUnpackRowLength !== 0 && gl.pixelStoreUnpackRowLength !== width) {
+                console.warn("UNIMPLEMENTED glTexImage2D GL_UNPACK_ROW_LENGTH " + gl.pixelStoreUnpackRowLength);
+            }
+            if (gl.pixelStoreUnpackSkipRows !== 0) {
+                console.warn("UNIMPLEMENTED glTexImage2D GL_UNPACK_SKIP_ROWS " + gl.pixelStoreUnpackSkipRows);
+            }
+            if (gl.pixelStoreUnpackSkipPixels !== 0) {
+                console.warn("UNIMPLEMENTED glTexImage2D GL_UNPACK_SKIP_PIXELS " + gl.pixelStoreUnpackSkipPixels);
             }
             webgl.texImage2D(target, level, internalformat, width, height, border, format, type, pixels);
-        },
-
-        glGetTexLevelParameteriv: function(target, level, pname, params) {
-            switch (pname) {
-                case GL_TEXTURE_COMPRESSED:
-                    return false;
-                default:
-                    console.log("UNIMPLEMENTED glGetTexLevelParameteriv", target, level, pname, params);
-            }
         },
 
         glTexCoord2f: function(s, t) {
@@ -577,9 +804,46 @@ function OpenGL() {
             }
         },
 
+        glTexSubImage2D: function(target, level, xoffset, yoffset, width, height, format, type, pixels) {
+            console.log("glTexSubImage2D", target, level, xoffset, yoffset, width, height, format, type, pixels);
+            // WebGL only supports GL_RGBA
+            switch (format) {
+                case webgl.GL_RGBA:
+                    break;
+                case GL_BGRA:
+                    console.warn("glTexSubImage2D GL_BGRA as RGBA");
+                    format = webgl.RGBA;
+                    break;
+                default:
+                    console.warn("UNIMPLEMENTED glTexSubImage2D format " + format);
+                    return;
+            }
+            // pixels are coming in via FFI as void* (ArrayBuffer)
+            // convert to appropriate typed array
+            switch (type) {
+                case webgl.UNSIGNED_BYTE:
+                    pixels = new Uint8Array(pixels);
+                    break;
+                default:
+                    console.warn("UNIMPLEMENTED glTexSubImage2D type " + type);
+                    return;
+            }
+            // WebGL does not support GL_UNPACK_ROW_LENGTH, GL_UNPACK_SKIP_ROWS, GL_UNPACK_SKIP_PIXELS
+            if (gl.pixelStoreUnpackRowLength !== 0 && gl.pixelStoreUnpackRowLength !== width) {
+                console.warn("UNIMPLEMENTED glTexSubImage2D GL_UNPACK_ROW_LENGTH " + gl.pixelStoreUnpackRowLength);
+            }
+            if (gl.pixelStoreUnpackSkipRows !== 0) {
+                console.warn("UNIMPLEMENTED glTexSubImage2D GL_UNPACK_SKIP_ROWS " + gl.pixelStoreUnpackSkipRows);
+            }
+            if (gl.pixelStoreUnpackSkipPixels !== 0) {
+                console.warn("UNIMPLEMENTED glTexSubImage2D GL_UNPACK_SKIP_PIXELS " + gl.pixelStoreUnpackSkipPixels);
+            }
+            webgl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
+        },
+
         glVertex2f: function(x, y) {
             console.log("glVertex2f", x, y);
-            var position = [x, y, 0, 1];
+            var position = [x, y];
             this.pushVertex(position);
         },
 
@@ -623,6 +887,105 @@ function OpenGL() {
                 vertex.set(gl.texCoord, offset); offset += 2;
             }
             primitive.vertices.push(vertex);
+        },
+
+        // shader source code
+        vertexShaderSource: function(vertexAttrs) {
+            var src = [];
+            src.push("uniform mat4 uModelView;");
+            src.push("uniform mat4 uProjection;");
+            src.push("attribute vec3 aPosition;");
+            if (vertexAttrs & HAS_NORMAL) {
+                src.push("attribute vec3 uNormal;");
+                src.push("varying vec3 vNormal;");
+            }
+            if (vertexAttrs & HAS_COLOR) {
+                src.push("attribute vec4 uColor;");
+                src.push("varying vec4 vColor;");
+            }
+            if (vertexAttrs & HAS_TEXCOORD) {
+                src.push("attribute vec2 texCoord;");
+                src.push("varying vec2 vTexCoord;");
+            }
+            src.push("void main(void) {");
+            src.push("  gl_Position = uProjection * uModelView * vec4(aPosition, 1.0);");
+            if (vertexAttrs & HAS_NORMAL) {
+                src.push("  vNormal = uNormal;");
+            }
+            if (vertexAttrs & HAS_COLOR) {
+                src.push("  vColor = uColor;");
+            }
+            if (vertexAttrs & HAS_TEXCOORD) {
+                src.push("  vTexCoord = texCoord;");
+            }
+            src.push("}");
+            var src = src.join("\n");
+            console.log(src);
+            return src;
+        },
+
+        fragmentShaderSource: function(vertexAttrs) {
+            var src = [];
+            src.push("precision mediump float;");
+            if (vertexAttrs & HAS_NORMAL) {
+                src.push("varying vec3 vNormal;");
+            }
+            if (vertexAttrs & HAS_COLOR) {
+                src.push("varying vec4 vColor;");
+            } else {
+                src.push("uniform vec4 uColor;");
+            }
+            if (vertexAttrs & HAS_TEXCOORD) {
+                src.push("varying vec2 vTexCoord;");
+                src.push("uniform sampler2D uSampler;");
+            }
+            src.push("void main(void) {");
+            if (vertexAttrs & HAS_NORMAL) {
+                src.push("  vec3 normal = normalize(vNormal);");
+            }
+            if (vertexAttrs & HAS_TEXCOORD) {
+                src.push("  vec4 color = texture2D(uSampler, vec2(vTexCoord.s, vTexCoord.t));");
+            } else if (vertexAttrs & HAS_COLOR) {
+                src.push("  vec4 color = vColor;");
+            } else {
+                src.push("  vec4 color = uColor;");
+                src.push("  color = vec4(1, 0, 0, 1);");
+            }
+            if (vertexAttrs & HAS_NORMAL) {
+                src.push("  float diffuse = max(dot(normal, vec3(0, 0, 1)), 0.0);");
+                src.push("  gl_FragColor = color * diffuse;");
+            } else {
+                src.push("  gl_FragColor = color;");
+            }
+            src.push("}");
+            var src = src.join("\n");
+            console.log(src);
+            return src;
+        },
+
+        getLocations: function(program, vertexAttrs) {
+            var locations = {};
+            // uniforms
+            locations.uModelView = webgl.getUniformLocation(program, "uModelView");
+            locations.uProjection = webgl.getUniformLocation(program, "uProjection");
+            if (vertexAttrs & HAS_TEXCOORD) {
+                locations.uSampler = webgl.getUniformLocation(program, "uSampler");
+            }
+            // attributes
+            locations.aPosition = webgl.getAttribLocation(program, "aPosition");
+            if (vertexAttrs & HAS_NORMAL) {
+                locations.aNormal = webgl.getAttribLocation(program, "aNormal");
+            }
+            if (vertexAttrs & HAS_COLOR) {
+                locations.aColor = webgl.getAttribLocation(program, "aColor");
+            } else {
+                locations.uColor = webgl.getUniformLocation(program, "uColor");
+            }
+            if (vertexAttrs & HAS_TEXCOORD) {
+                locations.aTexCoord = webgl.getAttribLocation(program, "aTexCoord");
+            }
+            console.log(locations);
+            return locations;
         },
     };
 }
