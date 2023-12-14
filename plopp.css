@@ -28,7 +28,6 @@ video {
 }
 canvas {
     position: fixed;
-    background: #000;
     cursor: default;
 }
 canvas.pixelated {

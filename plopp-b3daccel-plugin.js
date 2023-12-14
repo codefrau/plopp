@@ -53,8 +53,12 @@ function B3DAcceleratorPlugin() {
             var canvas = document.createElement("canvas");
             canvas.width = w;
             canvas.height = h;
+            // this is for Plopp, we ignore the actual rectangle
             canvas.style.position = "absolute";
             canvas.style.backgroundColor = "transparent";
+            canvas.style.width = "100%"
+            canvas.style.height = "100%"
+            canvas.style.objectFit = "contain";
             document.body.appendChild(canvas);
             var options = { depth: true, alpha: false, antialias: true };
             if (flags & B3D_STENCIL_BUFFER) options.stencil = true;
@@ -190,7 +194,7 @@ function B3DAcceleratorPlugin() {
             console.log("B3DAccel: primitiveSwapRendererBuffers", handle);
             // let browser display the rendered frame
             this.interpreterProxy.vm.breakNow();
-            debugger;
+            // debugger; // wait after each frame
             this.interpreterProxy.pop(argCount);
             return true;
         },
