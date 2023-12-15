@@ -71,6 +71,11 @@ function PloppMpeg3Plugin() {
                         console.log("primitiveMPEG3Open: "
                             + (player.isVideo? player.videoWidth + "x" + player.videoHeight + ", " : "")
                             + player.duration + "s " + player.src);
+                        if (player.isAudio) {
+                            // we pretend to send samples so Squeak can track time
+                            player.sentSamples = 0;
+                            player.totalSamples = Math.floor(player.duration * 44100);
+                        }
                         // continue
                         if (button) button.style.display = "none";
                         unfreeze();
@@ -210,23 +215,30 @@ function PloppMpeg3Plugin() {
         primitiveMPEG3GetSample: function(argCount) {
             var player = this.playerFromStackArg(1);
             if (!player) return false;
-            var sample = Math.floor(player.currentTime * 44100);
-            var samples = Math.floor(player.duration * 44100);
-            // console.log("primitiveMPEG3GetSample", sample, "of", samples);
-            if (sample >= samples) sample = samples - 1;
-            return this.primHandler.popNandPushIntIfOK(argCount + 1, sample);
+            var sent = player.sentSamples;
+            // var actual = Math.floor(player.currentTime * 44100);
+            // var total = player.totalSamples;
+            // if (sent >= total) sent = total - 1;
+            // console.log("primitiveMPEG3GetSample sent:", sent, "/", total, "(todo:", total - sent, "), actual:", actual, "todo:", sent - actual);
+            return this.primHandler.popNandPushIntIfOK(argCount + 1, sent);
         },
 
         primitiveMPEG3AudioSamples: function(argCount) {
             var player = this.playerFromStackArg(1);
             if (!player) return false;
-            var samples = Math.floor(player.duration * 44100);
-            // console.log("primitiveMPEG3AudioSamples", samples);
-            return this.primHandler.popNandPushIntIfOK(argCount + 1, samples);
+            var total = player.totalSamples;
+            // console.log("primitiveMPEG3AudioSamples", total);
+            return this.primHandler.popNandPushIntIfOK(argCount + 1, total);
         },
 
         primitiveMPEG3ReadAudio: function(argCount) {
-            // console.log("primitiveMPEG3ReadAudio");
+            // args: handle,  buffer, channel, samples, stream
+            var player = this.playerFromStackArg(4);
+            var sending = this.interpreterProxy.stackIntegerValue(1);
+            // we need to keep track of the number of samples we sent
+            player.sentSamples += sending;
+            // var total = player.totalSamples;
+            // console.log("primitiveMPEG3ReadAudio: sending", sending, "=", player.sentSamples, "/", total, "todo:", total - player.sentSamples);
             this.interpreterProxy.pop(argCount);
             return true;
         },
@@ -234,11 +246,9 @@ function PloppMpeg3Plugin() {
         primitiveMPEG3EndOfAudio: function(argCount) {
             var player = this.playerFromStackArg(1);
             if (!player) return false;
-            if (player.ended) {
-                console.log("primitiveMPEG3EndOfAudio:", player.ended);
-                debugger
-            }
-            return this.primHandler.popNandPushBoolIfOK(argCount + 1, player.ended);
+            var ended = player.sentSamples >= player.totalSamples;
+            if (ended) console.log("primitiveMPEG3EndOfAudio:", ended);
+            return this.primHandler.popNandPushBoolIfOK(argCount + 1, ended);
         }
     };
 }
