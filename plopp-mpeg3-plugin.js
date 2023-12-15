@@ -216,11 +216,12 @@ function PloppMpeg3Plugin() {
             var player = this.playerFromStackArg(1);
             if (!player) return false;
             var sent = player.sentSamples;
-            // var actual = Math.floor(player.currentTime * 44100);
-            // var total = player.totalSamples;
-            // if (sent >= total) sent = total - 1;
-            // console.log("primitiveMPEG3GetSample sent:", sent, "/", total, "(todo:", total - sent, "), actual:", actual, "todo:", sent - actual);
-            return this.primHandler.popNandPushIntIfOK(argCount + 1, sent);
+            var actual = Math.floor(player.currentTime * 44100);
+            var total = player.totalSamples;
+            var samples = sent > actual ? sent : actual;    // in case Squeak is behind
+            if (samples >= total) samples = total - 1;
+            // console.log("primitiveMPEG3GetSample sent:", sent, "/", total, "(todo:", total - sent, "), actual:", actual, "todo:", samples - actual);
+            return this.primHandler.popNandPushIntIfOK(argCount + 1, samples);
         },
 
         primitiveMPEG3AudioSamples: function(argCount) {
