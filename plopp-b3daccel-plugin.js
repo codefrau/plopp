@@ -1,3 +1,5 @@
+var DEBUG = false;
+
 function B3DAcceleratorPlugin() {
     "use strict";
 
@@ -34,7 +36,7 @@ function B3DAcceleratorPlugin() {
         primitiveSetVerboseLevel: function(argCount) {
             if (argCount !== 1) return false;
             var level = this.interpreterProxy.stackIntegerValue(0);
-            console.log("B3DAccel: primitiveSetVerboseLevel", level);
+            DEBUG && console.log("B3DAccel: primitiveSetVerboseLevel", level);
             this.interpreterProxy.pop(argCount);
             return true;
         },
@@ -46,7 +48,7 @@ function B3DAcceleratorPlugin() {
             var y = this.interpreterProxy.stackIntegerValue(2);
             var x = this.interpreterProxy.stackIntegerValue(3);
             var flags = this.interpreterProxy.stackIntegerValue(4);
-            console.log("B3DAccel: primitiveCreateRendererFlags", x, y, w, h, flags);
+            DEBUG && console.log("B3DAccel: primitiveCreateRendererFlags", x, y, w, h, flags);
             if (flags & ~(B3D_HARDWARE_RENDERER | B3D_SOFTWARE_RENDERER | B3D_STENCIL_BUFFER))
                 return false;
             // create WebGL canvas
@@ -76,7 +78,7 @@ function B3DAcceleratorPlugin() {
         primitiveDestroyRenderer: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
-            console.log("B3DAccel: primitiveDestroyRenderer", handle);
+            DEBUG && console.log("B3DAccel: primitiveDestroyRenderer", handle);
             this.interpreterProxy.pop(argCount);
             return true;
         },
@@ -84,7 +86,7 @@ function B3DAcceleratorPlugin() {
         primitiveGetRendererSurfaceHandle: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
-            console.log("B3DAccel: primitiveGetRendererSurfaceHandle", handle);
+            DEBUG && console.log("B3DAccel: primitiveGetRendererSurfaceHandle", handle);
             var surface = 4242;
             return this.primHandler.popNandPushIfOK(argCount + 1, surface);
         },
@@ -93,7 +95,7 @@ function B3DAcceleratorPlugin() {
             if (argCount !== 2) return false;
             var property = this.interpreterProxy.stackIntegerValue(0);
             var handle = this.interpreterProxy.stackIntegerValue(1);
-            console.log("B3DAccel: primitiveGetIntProperty", handle, property);
+            DEBUG && console.log("B3DAccel: primitiveGetIntProperty", handle, property);
             var value = this.b3dxGetIntProperty(handle, property);
             return this.primHandler.popNandPushIfOK(argCount + 1, value);
         },
@@ -102,7 +104,7 @@ function B3DAcceleratorPlugin() {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             var width = 800;
-            console.log("B3DAccel: primitiveGetRendererSurfaceWidth", width);
+            DEBUG && console.log("B3DAccel: primitiveGetRendererSurfaceWidth", width);
             return this.primHandler.popNandPushIfOK(argCount + 1, width);
         },
 
@@ -110,7 +112,7 @@ function B3DAcceleratorPlugin() {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             var height = 600;
-            console.log("B3DAccel: primitiveGetRendererSurfaceHeight", height);
+            DEBUG && console.log("B3DAccel: primitiveGetRendererSurfaceHeight", height);
             return this.primHandler.popNandPushIfOK(argCount + 1, height);
         },
 
@@ -118,7 +120,7 @@ function B3DAcceleratorPlugin() {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
             var depth = 32;
-            console.log("B3DAccel: primitiveGetRendererSurfaceDepth", depth);
+            DEBUG && console.log("B3DAccel: primitiveGetRendererSurfaceDepth", depth);
             return this.primHandler.popNandPushIfOK(argCount + 1, depth);
         },
 
@@ -131,7 +133,7 @@ function B3DAcceleratorPlugin() {
             for (var i = 0; i < 4; i++) {
                 array.pointers[i] = this.interpreterProxy.positive32BitIntegerFor(masks[i]);
             }
-            console.log("B3DAccel: primitiveGetRendererColorMasks", masks);
+            DEBUG && console.log("B3DAccel: primitiveGetRendererColorMasks", masks);
             this.interpreterProxy.pop(argCount);
             return true;
         },
@@ -143,7 +145,7 @@ function B3DAcceleratorPlugin() {
             var y = this.interpreterProxy.stackIntegerValue(2);
             var x = this.interpreterProxy.stackIntegerValue(3);
             var handle = this.interpreterProxy.stackIntegerValue(4);
-            console.log("B3DAccel: primitiveSetViewport", x, y, w, h);
+            DEBUG && console.log("B3DAccel: primitiveSetViewport", x, y, w, h);
             this.b3dxSetViewport(handle, x, y, w, h);
             this.interpreterProxy.pop(argCount);
             return true;
@@ -155,7 +157,7 @@ function B3DAcceleratorPlugin() {
             var modelViewMatrix = this.stackMatrix(1);
             var projectionMatrix = this.stackMatrix(0);
             if (!modelViewMatrix || !projectionMatrix) return false;
-            console.log("B3DAccel: primitiveSetTransform", projectionMatrix, modelViewMatrix);
+            DEBUG && console.log("B3DAccel: primitiveSetTransform", projectionMatrix, modelViewMatrix);
             this.b3dxSetTransform(handle, projectionMatrix, modelViewMatrix);
             this.interpreterProxy.pop(argCount);
             return true;
@@ -168,7 +170,7 @@ function B3DAcceleratorPlugin() {
             if (this.interpreterProxy.failed()) return false;
             if (!this.b3dxDisableLights(handle)) return false;
             if (!lightArray) return false;
-            console.log("B3DAccel: primitiveSetLights", lightArray);
+            DEBUG && console.log("B3DAccel: primitiveSetLights", lightArray);
             var lightCount = lightArray.pointersSize();
             for (var i = 0; i < lightCount; i++) {
                 var light = this.fetchLightSource(i, lightArray);
@@ -191,7 +193,7 @@ function B3DAcceleratorPlugin() {
         primitiveSwapRendererBuffers: function(argCount) {
             if (argCount !== 1) return false;
             var handle = this.interpreterProxy.stackIntegerValue(0);
-            console.log("B3DAccel: primitiveSwapRendererBuffers", handle);
+            DEBUG && console.log("B3DAccel: primitiveSwapRendererBuffers", handle);
             // let browser display the rendered frame
             this.interpreterProxy.vm.breakNow();
             // debugger; // wait after each frame
@@ -200,30 +202,30 @@ function B3DAcceleratorPlugin() {
         },
 
         b3dxSetViewport: function(handle, x, y, w, h) {
-            console.log("B3DAccel: b3dxSetViewport", handle, x, y, w, h);
+            DEBUG && console.log("B3DAccel: b3dxSetViewport", handle, x, y, w, h);
         },
 
         b3dxSetTransform: function(handle, projectionMatrix, modelViewMatrix) {
-            console.log("B3DAccel: b3dxSetTransform", handle, projectionMatrix, modelViewMatrix);
+            DEBUG && console.log("B3DAccel: b3dxSetTransform", handle, projectionMatrix, modelViewMatrix);
         },
 
         b3dxDisableLights: function(handle) {
-            console.log("B3DAccel: b3dxDisableLights", handle);
+            DEBUG && console.log("B3DAccel: b3dxDisableLights", handle);
             return true;
         },
 
         b3dxLoadLight: function(handle, index, light) {
-            console.log("B3DAccel: b3dxLoadLight", handle, index, light);
+            DEBUG && console.log("B3DAccel: b3dxLoadLight", handle, index, light);
             return true;
         },
 
         b3dxLoadMaterial: function(handle, material) {
-            console.log("B3DAccel: b3dxLoadMaterial", handle, material);
+            DEBUG && console.log("B3DAccel: b3dxLoadMaterial", handle, material);
             return true;
         },
 
         b3dxGetIntProperty: function(handle, prop) {
-            console.log("B3DAccel: b3dxGetIntProperty", handle, prop);
+            DEBUG && console.log("B3DAccel: b3dxGetIntProperty", handle, prop);
             // switch (prop) {
             //     case 1: /* backface culling */
             //         if (!glIsEnabled(GL_CULL_FACE)) return 0;
@@ -274,7 +276,7 @@ function B3DAcceleratorPlugin() {
         fetchLightSource: function(index, lightArray) {
             var light = lightArray.pointers[index];
             if (!light) return null;
-            console.log("B3DAccel: fetchLightSource", index, light);
+            DEBUG && console.log("B3DAccel: fetchLightSource", index, light);
             return light;
         },
 

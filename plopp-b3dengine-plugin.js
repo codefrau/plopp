@@ -1,3 +1,5 @@
+var DEBUG = false;
+
 function B3DEnginePlugin() {
     "use strict";
 
@@ -14,13 +16,13 @@ function B3DEnginePlugin() {
 
         b3dInitializeRasterizerState: function(argCount) {
             if (argCount !== 0) return false;
-            console.log("Squeak3D: b3dInitializeRasterizerState");
+            DEBUG && console.log("Squeak3D: b3dInitializeRasterizerState");
             return true;
         },
 
         b3dTransformPoint: function(argCount) {
             if (argCount !== 1) return false;
-            console.log("Squeak3D: b3dTransformPoint");
+            DEBUG && console.log("Squeak3D: b3dTransformPoint");
             var v3Oop = this.interpreterProxy.stackObjectValue(0);
             if (this.interpreterProxy.failed()) return false;
             if (!v3Oop.isWords || v3Oop.words.length !== 3) return false;
@@ -54,7 +56,7 @@ function B3DEnginePlugin() {
 
         b3dOrthoNormInverseMatrix: function(argCount) {
             if (argCount !== 0) return false;
-            console.log("Squeak3D: b3dOrthoNormInverseMatrix");
+            DEBUG && console.log("Squeak3D: b3dOrthoNormInverseMatrix");
             var srcOop = this.interpreterProxy.stackObjectValue(0);
             if (this.interpreterProxy.failed()) return false;
             if (!srcOop.isWords || srcOop.words.length !== 16) return false;
@@ -83,7 +85,7 @@ function B3DEnginePlugin() {
 
         b3dTransposeMatrix: function(argCount) {
             if (argCount !== 0) return false;
-            console.log("Squeak3D: b3dTransposeMatrix");
+            DEBUG && console.log("Squeak3D: b3dTransposeMatrix");
             var srcOop = this.interpreterProxy.stackObjectValue(0);
             if (this.interpreterProxy.failed()) return false;
             if (!srcOop.isWords || srcOop.words.length !== 16) return false;
@@ -102,7 +104,7 @@ function B3DEnginePlugin() {
 
         b3dTransformDirection: function(argCount) {
             if (argCount !== 1) return false;
-            console.log("Squeak3D: b3dTransformDirection");
+            DEBUG && console.log("Squeak3D: b3dTransformDirection");
             var v3Oop = this.interpreterProxy.stackObjectValue(0);
             if (this.interpreterProxy.failed()) return false;
             if (!v3Oop.words || v3Oop.words.length !== 3) return false;
@@ -132,7 +134,7 @@ function B3DEnginePlugin() {
             var m2 = this.stackMatrix(1);
             var m1 = this.stackMatrix(2);
             if (!m1 || !m2 || !m3) return false;
-            console.log("Squeak3D: b3dTransformMatrixWithInto");
+            DEBUG && console.log("Squeak3D: b3dTransformMatrixWithInto");
             for (var row = 0; row < 16; row += 4) {
                 var c0 = m1[row+0] * m2[0] + m1[row+1] * m2[4] + m1[row+2] * m2[8] + m1[row+3] * m2[12];
                 var c1 = m1[row+0] * m2[1] + m1[row+1] * m2[5] + m1[row+2] * m2[9] + m1[row+3] * m2[13];
