@@ -36,10 +36,20 @@
     <script src="plopp-opengl.js"></script>
     <script>
         // the main reason for requiring a click
-        // is to allow video to play
+        // is to allow video/audio to play
         start.onclick = function() {
+            // hide start overlay
             start.style.display = "none";
             Squeak.debugFiles = true;
+            // we will reuse the same Video object for all sounds
+            // so we can play without another user interaction
+            // (particularily on iOS)
+            window.PloppVideo = document.createElement("video");
+            PloppVideo.src = "plopp-webstart.mp3";
+            PloppVideo.play();
+            // also play a silent audio to allow audio on iOS
+            PloppAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+            PloppAudio.play();
              // disable fsck (has trouble with templates)
             Squeak.fsck = function() {};
             // pretend to be unix

@@ -4,8 +4,6 @@
 // empty video frames are sent to Squeak, videos are shown as overlay in the browser
 // silent audio is sent to Squeak, we play directly via browser
 
-var firstTime = true;
-
 function PloppMpeg3Plugin() {
     "use strict";
 
@@ -34,36 +32,32 @@ function PloppMpeg3Plugin() {
             path = path.replace(/.*\/Plopp\//, "");
             path = path.replace(/\.mpg$/, ".mp4");
             var isAudio = path.match(/\.mp3$/);
-            // create player element
-            var player = document.createElement(isAudio ? "audio" : "video");
-            player.src = path;
-            player.playsInline = true; // Safari
-            player.isAudio = isAudio;
-            player.isVideo = !isAudio;
-            if (player.isVideo) document.body.appendChild(player);
+            // We use PloppAudio or PloppVideo which have been
+            // interacted with by the user, so they are allowed to play
+            var player;
+            if (isAudio) {
+                player = PloppAudio;
+                player.isAudio = true;
+            } else {
+                player = PloppVideo;
+                player.isVideo = true;
+                player.playsInline = true; // Safari
+                document.body.appendChild(player);
+            }
+            player.src = path; // start playing
+            player.currentTime = 0; // start at beginning
+            player.play();
+            console.log(player);
             // create handle
             var handle = this.primHandler.makeStString("squeakjs-mpeg:" + path);
             handle.player = player;
             // freeze VM until player is actually playing
-            // which may need a user gesture
-            var button;
-            if (firstTime) { // only show button once
-                button = document.getElementById("continue");
-                button.style.display = "block";
-                button.style.opacity = 0.01;
-                button.style.transition = "opacity 0.5s";
-                setTimeout(function() { button.style.opacity = 1; }, 100);
-                button.onclick = function() { player.play(); };
-                document.body.appendChild(button);
-                firstTime = false;
-            }
-            try {
-                // this works in Chrome and Firefox
-                player.play();
-                // once playing, we'll remove the button
-                // on Safari, user will have to click it
-            } catch (err) {};
             this.vm.freeze(function(unfreeze) {
+                function continueExecution() {
+                    unfreeze();
+                    unfreeze = null; // don't unfreeze twice
+                }
+
                 player.addEventListener('timeupdate',
                     function() {
                         if (player.currentTime < 0.1) return; // not playing yet
@@ -76,18 +70,13 @@ function PloppMpeg3Plugin() {
                             player.sentSamples = 0;
                             player.totalSamples = Math.floor(player.duration * 44100);
                         }
-                        // continue
-                        if (button) button.style.display = "none";
-                        unfreeze();
-                        unfreeze = null; // don't unfreeze twice
+                        continueExecution();
                     },
                 );
                 player.onerror = function(err) {
                     if (!unfreeze) return; // too late
                     console.error("primitiveMPEG3Open: error", err);
-                    if (button) button.style.display = "none";
-                    unfreeze();
-                    unfreeze = null; // don't unfreeze twice
+                    continueExecution();
                 };
             }.bind(this));
             // the primitive will succeeed now, but then the VM
@@ -174,13 +163,13 @@ function PloppMpeg3Plugin() {
             if (!player) return false;
             var frame = this.interpreterProxy.stackIntegerValue(1);
             // player.currentTime = frame / 25;
-            console.log("IGNORING primitiveMPEG3SetFrame", frame, "(current time is", player.currentTime, ")");
+            console.log("IGNORING primitiveMPEG3SetFrame", frame, "(current time is " + player.currentTime.toFixed(1) + ")");
             this.interpreterProxy.pop(argCount);
             return true;
         },
 
         primitiveMPEG3DropFrames: function(argCount) {
-            var count = this.interpreterProxy.stackIntegerValue(1);
+            // var count = this.interpreterProxy.stackIntegerValue(1);
             // console.log("primitiveMPEG3DropFrames", count);
             this.interpreterProxy.pop(argCount);
             return true;
@@ -218,9 +207,10 @@ function PloppMpeg3Plugin() {
             var sent = player.sentSamples;
             var actual = Math.floor(player.currentTime * 44100);
             var total = player.totalSamples;
-            var samples = sent > actual ? sent : actual;    // in case Squeak is behind
-            if (samples >= total) samples = total - 1;
-            // console.log("primitiveMPEG3GetSample sent:", sent, "/", total, "(todo:", total - sent, "), actual:", actual, "todo:", samples - actual);
+            var samples = sent;
+            if (samples > total) samples = total;
+            if (actual > total || player.ended) actual = total;
+            // console.log("primitiveMPEG3GetSample sent:", sent, "/", total, "(todo:", total - sent, "), actual:", actual, "todo:", total - actual, "ended:", player.ended);
             return this.primHandler.popNandPushIntIfOK(argCount + 1, samples);
         },
 
@@ -247,10 +237,14 @@ function PloppMpeg3Plugin() {
         primitiveMPEG3EndOfAudio: function(argCount) {
             var player = this.playerFromStackArg(1);
             if (!player) return false;
-            var ended = player.sentSamples >= player.totalSamples;
+            var sent = player.sentSamples;
+            var actual = Math.floor(player.currentTime * 44100);
+            var total = player.totalSamples;
+            var samples = sent > actual ? sent : actual;    // in case Squeak is behind
+            var ended = samples >= total || player.ended;
             if (ended) console.log("primitiveMPEG3EndOfAudio:", ended);
             return this.primHandler.popNandPushBoolIfOK(argCount + 1, ended);
-        }
+        },
     };
 }
 
