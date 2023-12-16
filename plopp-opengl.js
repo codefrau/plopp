@@ -202,6 +202,13 @@ function OpenGL() {
             if (mask & webgl.STENCIL_BUFFER_BIT) maskString += " STENCIL";
             DEBUG && console.log("glClear"+ maskString);
             webgl.clear(mask);
+            // B3DAcceleratorPlugin will call vm.breakNow()
+            // to emulate double buffering (which will return
+            // control to the browser which will flush the canvas).
+            // We discourage breaking until then to avoid flicker
+            // glClear is a good place for that since it's usually
+            // called at least once per frame
+            this.vm.breakAfter(500);
         },
 
         glClearColor: function(red, green, blue, alpha) {
