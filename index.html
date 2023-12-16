@@ -49,8 +49,13 @@
             PloppVideo.play();
             // also play a silent audio to allow audio on iOS
             PloppAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+            // for some reason, timing is more accurate on iOS
+            // if we play through an audio context
+            var audioCtx = Squeak.startAudioOut();
+            var node = audioCtx.createMediaElementSource(PloppAudio);
+            node.connect(audioCtx.destination);
             PloppAudio.play();
-             // disable fsck (has trouble with templates)
+            // disable fsck (has trouble with templates)
             Squeak.fsck = function() {};
             // pretend to be unix
             Squeak.platformName = "unix";
