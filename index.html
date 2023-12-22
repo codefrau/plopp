@@ -59,12 +59,20 @@
             Squeak.fsck = function() {};
             // pretend to be unix
             Squeak.platformName = "unix";
-            // pretend to have an FFI libc
-            Squeak.registerExternalModule('', {
-                getModuleName: function() { return 'libc.so'; },
+            // emulate system calls
+            Squeak.registerExternalModule('libc', {
                 getenv(v) {
                     if (v === "HOME") return "/Plopp/user";
-                    return null;
+                    throw new Error("UNIMPLEMENTED getenv: " + v);
+                },
+                system(command) {
+                    var argv = command.split(" ").map(a => a.replace(/^'(.*)'$/, "$1"));
+                    if (argv[0] === "/SqueakJS/openbrowser.sh") {
+                        var url = argv[1].replace(/^file:\/\/\/SqueakJS\/Plopp\//, "");
+                        window.open(url);
+                        return 0;
+                    }
+                    throw new Error("UNIMPLEMENTED system: " + command);
                 },
             });
             var url = "plopp.image";
