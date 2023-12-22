@@ -58,6 +58,7 @@ function B3DAcceleratorPlugin() {
             // this is for Plopp, we ignore the actual rectangle
             canvas.style.position = "absolute";
             canvas.style.backgroundColor = "transparent";
+            canvas.style.pointerEvents = "none";
             canvas.style.width = "100%"
             canvas.style.height = "100%"
             canvas.style.objectFit = "contain";
