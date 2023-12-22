@@ -1,0 +1,81 @@
+body {
+	background-color: #FFFFFF;
+	background-repeat: repeat-x;
+	background-attachment: fixed;
+	background-image: url(verlauf.png);
+}
+
+
+a:link {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #FF6600;
+	font-weight: bold;
+}
+a:visited {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #FF6600;
+	font-weight: bold;
+}
+a:hover {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color:  #464441;
+	font-weight: bold;
+}
+a:active {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color:  #464441;
+	font-weight: bold;
+}
+
+.linkueberschrift {
+	padding-left: 70px;
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 18px;
+	color: #FF6600;
+	padding-top: 20px;
+	font-weight: bold;
+}
+
+
+
+.texteingerueckt {
+	padding-left: 70px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	text-align: justify;
+	padding-top: 10px;
+	line-height: 20px;
+	color: #464441;
+	font-weight: normal;
+	width: 550px;
+}
+
+
+.titelzeile {
+	
+	background-image: url(logo_plopp_titelzeile.png);
+	height: 94px;
+	width: 989px;
+}
+
+.links_eingerueckt {
+	padding-left: 40px;
+	padding-right: 30px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	width: 400px;
+	padding-top: 10px;
+	line-height: 20px;
+	color: #416000;
+	font-weight: normal;
+}
+

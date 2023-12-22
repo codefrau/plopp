@@ -1,0 +1,86 @@
+body {
+	background-image:  url(pixel_gruen.png);
+	background-repeat: repeat;
+}
+
+
+a:link {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #FF6600;
+	font-weight: bold;
+}
+a:visited {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #FF6600;
+	font-weight: bold;
+}
+a:hover {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #416000;
+	font-weight: bold;
+}
+a:active {
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #416000;
+	font-weight: bold;
+}
+
+
+.plopp_mitte_inhalt {
+	height: 482px;
+	width: 910px;
+
+}
+
+
+
+
+.titelzeile {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	color: #416000;
+	background-image: url(plopp_titelzeile.png);
+	height: 97px;
+	width: 989px;
+}
+
+
+
+
+.eingangstext {
+	padding-left: 70px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	height: 439px;
+	width: 650px;
+	text-align: justify;
+	line-height: 20px;
+	color: #416000;
+	font-weight: normal;
+}
+
+
+
+.hilfe_mitte_inhalt {
+	height: 486px;
+	width: 910px;
+	background-image: url(plipp.png);
+	background-repeat: no-repeat;
+}
+
+
+
+.links_navigation01 {
+
+	height: 162px;
+	width: 92px;
+}
+
