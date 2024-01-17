@@ -22,8 +22,9 @@
         Note: The initial wait might be quite long.<br>
         <br>
         Plopp is a Squeak Smalltalk application
-        developed by impara GmbH in 2006.<br>
-        This is a port to the web by Vanessa Freudenberg.<br>
+        (©️&nbsp;impara&nbsp;GmbH, Magdeburg 2007).<br>
+        <br>
+        The web runtime was created by Vanessa Freudenberg in 2024 using her SqueakJS VM.<br>
     </div>
     <div id="continue" class="overlay">
         <b>Click to continue</b><br>
@@ -35,35 +36,43 @@
     <script src="plopp-b3dengine-plugin.js"></script>
     <script src="plopp-opengl.js"></script>
     <script>
+        // TODO:
+        // [ ] - implement primJPEGWriteImage, required for:
+        // [ ] - photo/wallpaper export
+        // [ ] - ecard sending (?)
+        // [ ] - printing
+
         // the main reason for requiring a click
         // is to allow video/audio to play
         start.onclick = function() {
+            Squeak.debugFiles = false;
+            // disable fsck (has trouble with templates)
+            Squeak.fsck = function() {};
+
             // hide start overlay
             start.style.display = "none";
-            Squeak.debugFiles = true;
             // we will reuse the same Video object for all sounds
             // so we can play without another user interaction
             // (particularily on iOS)
             window.PloppVideo = document.createElement("video");
-            PloppVideo.src = "plopp-webstart.mp3";
+            PloppVideo.src = "plopp-webstart.mp3"; // yes, it's an mp3 in a video tag
             PloppVideo.play();
             // also play a silent audio to allow audio on iOS
-            PloppAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+            window.PloppAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
             // for some reason, timing is more accurate on iOS
             // if we play through an audio context
             var audioCtx = Squeak.startAudioOut();
             var node = audioCtx.createMediaElementSource(PloppAudio);
             node.connect(audioCtx.destination);
             PloppAudio.play();
-            // disable fsck (has trouble with templates)
-            Squeak.fsck = function() {};
             // pretend to be unix
             Squeak.platformName = "unix";
             // emulate system calls
-            Squeak.registerExternalModule('libc', {
+            Squeak.registerExternalModule('libc.so', {
                 getenv(v) {
                     if (v === "HOME") return "/Plopp/user";
-                    throw new Error("UNIMPLEMENTED getenv: " + v);
+                    console.warn("UNIMPLEMENTED getenv: " + v);
+                    debugger
                 },
                 system(command) {
                     var argv = command.split(" ").map(a => a.replace(/^'(.*)'$/, "$1"));
@@ -72,7 +81,9 @@
                         window.open(url);
                         return 0;
                     }
-                    throw new Error("UNIMPLEMENTED system: " + command);
+                    console.warn("UNIMPLEMENTED system: " + command);
+                    debugger
+                    return 1;
                 },
             });
             var url = "plopp.image";
