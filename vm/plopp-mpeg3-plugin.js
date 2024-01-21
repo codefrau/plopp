@@ -10,7 +10,7 @@ function PloppMpeg3Plugin() {
     var DEBUG = 0; // 0 = off, 1 = some, 2 = lots
 
     return {
-        getModuleName: function() { return 'Mpeg3Plugin'; },
+        getModuleName: function() { return 'Mpeg3Plugin (plopp)'; },
         interpreterProxy: null,
         primHandler: null,
         vm: null,
@@ -31,7 +31,7 @@ function PloppMpeg3Plugin() {
             var pathObj = this.interpreterProxy.stackObjectValue(0);
             var path = pathObj.bytesAsString();
             // hack to find mp4 in Plopp directory
-            path = path.replace(/.*\/Plopp\//, "");
+            path = path.replace(/.*\/Plopp\//, "Contents/Resources/");
             path = path.replace(/\.mpg$/, ".mp4");
             var isAudio = path.match(/\.mp3$/);
             // We use PloppAudio or PloppVideo which have been

@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <title>Plopp</title>
-    <link rel="icon" type="image/png" href="plopp.png">
-    <link rel="apple-touch-icon" href="plopp.png" sizes="152x152">
+    <link rel="icon" type="image/png" href="index.png">
+    <link rel="apple-touch-icon" href="index.png" sizes="152x152">
     <meta name="viewport" content="minimum-scale=1,maximum-scale=1,width=device-width">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="msapplication-TileImage" content="plopp.png">
-    <link rel="stylesheet" href="plopp.css">
-    <script type="module" src="squeak.js"></script>
+    <meta name="msapplication-TileImage" content="index.png">
+    <link rel="stylesheet" href="index.css">
+    <script type="module" src="vm/squeak.js"></script>
 </head>
 <body>
     <canvas id="sqCanvas" width="800" height="600"></canvas>
@@ -17,7 +17,7 @@
     <div id="start" class="overlay">
         <b>Click to start Plopp</b><br>
         <br>
-        <img id="logo" src="plopp.png"><br>
+        <img id="logo" src="index.png"><br>
         <br>
         Note: The initial wait might be quite long.<br>
         <br>
@@ -29,18 +29,18 @@
     <div id="continue" class="overlay">
         <b>Click to continue</b><br>
         <br>
-        <img id="logo" src="plopp.png"><br>
+        <img id="logo" src="index.png"><br>
     </div>
-    <script src="plopp-mpeg3-plugin.js"></script>
-    <script src="plopp-b3daccel-plugin.js"></script>
-    <script src="plopp-b3dengine-plugin.js"></script>
-    <script src="plopp-opengl.js"></script>
+    <script src="vm/plopp-mpeg3-plugin.js"></script>
+    <script src="vm/plopp-b3daccel-plugin.js"></script>
+    <script src="vm/plopp-b3dengine-plugin.js"></script>
+    <script src="vm/plopp-opengl.js"></script>
     <script>
         // TODO:
-        // [ ] - implement primJPEGWriteImage, required for:
+        // [x] - implement primJPEGWriteImage, required for:
         // [ ] - photo/wallpaper export
-        // [ ] - ecard sending (?)
         // [ ] - printing
+        // [ ] - ecard sending (?)
 
         // the main reason for requiring a click
         // is to allow video/audio to play
@@ -48,6 +48,16 @@
             Squeak.debugFiles = false;
             // disable fsck (has trouble with templates)
             Squeak.fsck = function() {};
+            // reload templates if from older version
+            if (Squeak.Settings["squeak-template:/Plopp"] && !Squeak.Settings["squeak-template:/Plopp"].includes("Contents/Resources")) {
+                var all = Object.keys(Squeak.Settings);
+                for (var i = 0; i < all.length; i++) {
+                    var key = all[i];
+                    if (key.startsWith("squeak-template:/jasmine")) {
+                        delete Squeak.Settings[key];
+                    }
+                }
+            }
 
             // hide start overlay
             start.style.display = "none";
@@ -55,7 +65,7 @@
             // so we can play without another user interaction
             // (particularily on iOS)
             window.PloppVideo = document.createElement("video");
-            PloppVideo.src = "plopp-webstart.mp3"; // yes, it's an mp3 in a video tag
+            PloppVideo.src = "index.mp3"; // yes, it's an mp3 in a video tag
             PloppVideo.play();
             // also play a silent audio to allow audio on iOS
             window.PloppAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
@@ -77,8 +87,20 @@
                 system(command) {
                     var argv = command.split(" ").map(a => a.replace(/^'(.*)'$/, "$1"));
                     if (argv[0] === "/SqueakJS/openbrowser.sh") {
-                        var url = argv[1].replace(/^file:\/\/\/SqueakJS\/Plopp\//, "");
+                        var url = argv[1].replace(/^file:\/\/\/SqueakJS\/Plopp\//, "Contents/Resources/");
                         window.open(url);
+                        return 0;
+                    }
+                    if (argv[0] === "/SqueakJS/print.sh") {
+                        var file = argv[1];
+                        // e.g. /tmp/plopp.jpg
+                        console.warn("UNIMPLEMENTED print: " + file);
+                        return 0;
+                    }
+                    if (argv[0] === '/SqueakJS/setdesktop.sh') {
+                        var file = argv[1];
+                        // e.g. /Plopp/user/Plopp/plopp-wallpaper106128440.jpg
+                        console.warn("UNIMPLEMENTED setdesktop: " + file);
                         return 0;
                     }
                     console.warn("UNIMPLEMENTED system: " + command);
@@ -86,7 +108,7 @@
                     return 1;
                 },
             });
-            var url = "plopp.image";
+            var url = "Contents/Resources/plopp.image";
             SqueakJS.runSqueak(url, sqCanvas, {
                 appName: "Plopp",
                 fixedWidth: 800,
@@ -94,7 +116,7 @@
                 fullscreen: true,
                 spinner: sqSpinner,
                 root: "/Plopp",
-                templates: { "/Plopp": "." },
+                templates: { "/Plopp": "./" },
             });
         };
     </script>
