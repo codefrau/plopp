@@ -7,11 +7,43 @@
     font-family: sans-serif;
     text-align: center;
     padding-top: 10vw;
-    cursor: pointer;
 }
 #continue {
     z-index: 100;
     display: none;
+}
+#printerpage {
+    position: fixed;
+    top: 0; left: 0; bottom: 0; right: 0;
+}
+#printedimage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+@media screen {
+    #printerpage {
+        display: none;
+    }
+}
+@media print {
+    @page {
+        size: A4;
+        margin: 0;
+    }
+    html, body {
+        width: 210mm;
+        height: 100%;
+    }
+    * {
+        background: transparent !important;
+    }
+    body > * {
+        display: none !important;
+    }
+    #printerpage {
+        display: block !important;
+    }
 }
 #logo {
     width: 20vw;
@@ -32,7 +64,6 @@ canvas.b3daccel {
 }
 canvas {
     position: fixed;
-    cursor: default;
 }
 .pixelated {
     image-rendering: -moz-crisp-edges;

@@ -31,6 +31,9 @@
         <br>
         <img id="logo" src="index.png"><br>
     </div>
+    <div id="printerpage">
+        <img id="printedimage">
+    </div>
     <script src="vm/plopp-mpeg3-plugin.js"></script>
     <script src="vm/plopp-b3daccel-plugin.js"></script>
     <script src="vm/plopp-b3dengine-plugin.js"></script>
@@ -39,7 +42,7 @@
         // TODO:
         // [x] - implement primJPEGWriteImage, required for:
         // [ ] - photo/wallpaper export
-        // [ ] - printing
+        // [x] - printing
         // [ ] - ecard sending (?)
 
         // the main reason for requiring a click
@@ -50,10 +53,9 @@
             Squeak.fsck = function() {};
             // reload templates if from older version
             if (Squeak.Settings["squeak-template:/Plopp"] && !Squeak.Settings["squeak-template:/Plopp"].includes("Contents/Resources")) {
-                var all = Object.keys(Squeak.Settings);
-                for (var i = 0; i < all.length; i++) {
-                    var key = all[i];
-                    if (key.startsWith("squeak-template:/jasmine")) {
+                const all = Object.keys(Squeak.Settings);
+                for (const key of all) {
+                    if (key.startsWith("squeak-template:/Plopp")) {
                         delete Squeak.Settings[key];
                     }
                 }
@@ -71,52 +73,79 @@
             window.PloppAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
             // for some reason, timing is more accurate on iOS
             // if we play through an audio context
-            var audioCtx = Squeak.startAudioOut();
-            var node = audioCtx.createMediaElementSource(PloppAudio);
-            node.connect(audioCtx.destination);
+            const audioCtx = Squeak.startAudioOut();
+            const audioNode = audioCtx.createMediaElementSource(PloppAudio);
+            audioNode.connect(audioCtx.destination);
             PloppAudio.play();
             // pretend to be unix
             Squeak.platformName = "unix";
-            // emulate system calls
+            // we need a temp directory for printing
+            Squeak.dirCreate("/tmp");
+            // emulate unix system calls
             Squeak.registerExternalModule('libc.so', {
+                getModuleName() { return "libc.so (plopp)"; },
+                setInterpreter(proxy) { this.vm = proxy.vm; return true; },
                 getenv(v) {
                     if (v === "HOME") return "/Plopp/user";
                     console.warn("UNIMPLEMENTED getenv: " + v);
                     debugger
                 },
                 system(command) {
-                    var argv = command.split(" ").map(a => a.replace(/^'(.*)'$/, "$1"));
+                    const argv = command.split(" ").map(a => a.replace(/^'(.*)'$/, "$1"));
                     if (argv[0] === "/SqueakJS/openbrowser.sh") {
-                        var url = argv[1].replace(/^file:\/\/\/SqueakJS\/Plopp\//, "Contents/Resources/");
+                        const url = argv[1].replace(/^file:\/\/\/SqueakJS\/Plopp\//, "Contents/Resources/");
                         window.open(url);
                         return 0;
                     }
                     if (argv[0] === "/SqueakJS/print.sh") {
-                        var file = argv[1];
-                        // e.g. /tmp/plopp.jpg
-                        console.warn("UNIMPLEMENTED print: " + file);
+                        let file = argv[1]; // e.g. /tmp/plopp.jpg
+                        let unfreeze = this.vm.freeze();
+                        let url;
+                        const proceed = () => {
+                            if (file) { Squeak.fileDelete(file); file = null; }
+                            if (url) { URL.revokeObjectURL(url); url = null; }
+                            if (unfreeze) { unfreeze(); unfreeze = null; }
+                        };
+                        Squeak.fileGet(file,
+                            data => {
+                                const blob = new Blob([data], {type: "image/jpeg"});
+                                url = URL.createObjectURL(blob);
+                                const img = document.getElementById("printedimage");
+                                img.src = url;
+                                img.onload = () => {
+                                    window.print();
+                                    img.src = "";
+                                    proceed();
+                                };
+                                img.onerror = () => {
+                                    console.warn("print: failed to load " + file);
+                                    proceed();
+                                };
+                            }, err => {
+                                console.warn("print: failed to get " + file);
+                                file = null;
+                                proceed();
+                            });
                         return 0;
                     }
                     if (argv[0] === '/SqueakJS/setdesktop.sh') {
-                        var file = argv[1];
-                        // e.g. /Plopp/user/Plopp/plopp-wallpaper106128440.jpg
+                        const file = argv[1]; // e.g. /Plopp/user/Plopp/plopp-wallpaper106128440.jpg
                         console.warn("UNIMPLEMENTED setdesktop: " + file);
                         return 0;
                     }
-                    console.warn("UNIMPLEMENTED system: " + command);
+                    console.warn("UNIMPLEMENTED system command: " + command);
                     debugger
                     return 1;
                 },
             });
-            var url = "Contents/Resources/plopp.image";
-            SqueakJS.runSqueak(url, sqCanvas, {
+            SqueakJS.runSqueak("Contents/Resources/plopp.image", sqCanvas, {
                 appName: "Plopp",
                 fixedWidth: 800,
                 fixedHeight: 600,
                 fullscreen: true,
                 spinner: sqSpinner,
                 root: "/Plopp",
-                templates: { "/Plopp": "./" },
+                templates: { "/Plopp": "." },
             });
         };
     </script>
