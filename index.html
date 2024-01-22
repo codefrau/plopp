@@ -46,23 +46,46 @@
         // [ ] - ecard sending (?)
 
         // the main reason for requiring a click
-        // is to allow video/audio to play
+        // is to allow video/audio to play later
         start.onclick = function() {
             Squeak.debugFiles = false;
+            // hide start overlay
+            start.style.display = "none";
+            // setup files
+            setupFiles();
+            // setup audio/video for MPEG3Plugin
+            setupAudioVideo();
+            // emulate unix system calls
+            Squeak.registerExternalModule('libc.so', unixRuntime());
+            // run Plopp
+            SqueakJS.runSqueak("Contents/Resources/plopp.image", sqCanvas, {
+                appName: "Plopp",
+                fixedWidth: 800,
+                fixedHeight: 600,
+                fullscreen: true,
+                spinner: sqSpinner,
+                root: "/Plopp",
+                templates: { "/Plopp": "." },
+            });
+        };
+
+        function setupFiles() {
             // disable fsck (has trouble with templates)
             Squeak.fsck = function() {};
             // reload templates if from older version
-            if (Squeak.Settings["squeak-template:/Plopp"] && !Squeak.Settings["squeak-template:/Plopp"].includes("Contents/Resources")) {
+            const root = "squeak-template:/Plopp";
+            const templates = Squeak.Settings[root];
+            if (templates && !templates.includes("Contents/Resources")) {
                 const all = Object.keys(Squeak.Settings);
                 for (const key of all) {
-                    if (key.startsWith("squeak-template:/Plopp")) {
+                    if (key.startsWith(root)) {
                         delete Squeak.Settings[key];
                     }
                 }
             }
+        }
 
-            // hide start overlay
-            start.style.display = "none";
+        function setupAudioVideo() {
             // we will reuse the same Video object for all sounds
             // so we can play without another user interaction
             // (particularily on iOS)
@@ -77,12 +100,14 @@
             const audioNode = audioCtx.createMediaElementSource(PloppAudio);
             audioNode.connect(audioCtx.destination);
             PloppAudio.play();
+        }
+
+        function unixRuntime() {
             // pretend to be unix
             Squeak.platformName = "unix";
             // we need a temp directory for printing
             Squeak.dirCreate("/tmp");
-            // emulate unix system calls
-            Squeak.registerExternalModule('libc.so', {
+            return {
                 getModuleName() { return "libc.so (plopp)"; },
                 setInterpreter(proxy) { this.vm = proxy.vm; return true; },
                 getenv(v) {
@@ -137,17 +162,8 @@
                     debugger
                     return 1;
                 },
-            });
-            SqueakJS.runSqueak("Contents/Resources/plopp.image", sqCanvas, {
-                appName: "Plopp",
-                fixedWidth: 800,
-                fixedHeight: 600,
-                fullscreen: true,
-                spinner: sqSpinner,
-                root: "/Plopp",
-                templates: { "/Plopp": "." },
-            });
-        };
+            };
+        }
     </script>
 </body>
 </html>
