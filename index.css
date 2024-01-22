@@ -1,3 +1,6 @@
+body {
+    overflow: hidden;
+}
 .overlay {
     position: fixed;
     top: 0; left: 0; bottom: 0; right: 0;
@@ -8,6 +11,22 @@
     text-align: center;
     padding-top: 10vw;
 }
+#progress {
+    position: fixed;
+    top: 0; left: 0; bottom: 0; right: 0;
+    width: 100%;
+    background: #000;
+    color: #f90;
+    border: #F90 solid 2px;
+    border-radius: 10px;
+    display: none;
+}
+progress::-webkit-progress-bar {background-color: black; width: 100%;}
+progress {background-color: black;}
+progress::-webkit-progress-value {background-color: #f90 !important;}
+progress::-moz-progress-bar {background-color: #f90 !important;}
+progress {color: #f90;}
+
 #continue {
     z-index: 100;
     display: none;

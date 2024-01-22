@@ -45,6 +45,7 @@ function PloppMpeg3Plugin() {
                 player.isVideo = true;
                 player.playsInline = true; // Safari
                 document.body.appendChild(player);
+                if (window.sqVideoCallback) sqVideoCallback(player, "open");
             }
             player.src = path; // start playing
             player.currentTime = 0; // start at beginning
@@ -96,6 +97,7 @@ function PloppMpeg3Plugin() {
                 player.removeAttribute('src');
                 player.load();
             } catch (err) {}
+            if (window.sqVideoCallback) sqVideoCallback(player, "close");
             this.interpreterProxy.pop(argCount);
             return true;
         },

@@ -31,6 +31,7 @@
         <br>
         <img id="logo" src="index.png"><br>
     </div>
+    <progress id="progress"></progress>
     <div id="printerpage">
         <img id="printedimage">
     </div>
@@ -83,6 +84,42 @@
                     }
                 }
             }
+            // set up progress bar
+            // if this is a fresh installation there will be 198 reads+writes
+            // otherwise we will count the files in the user art directory
+            let count = 0;
+            const userArt = "/Plopp/user/.Plopp1.2";
+            if (Squeak.dirList(userArt + "/Paintings")) {
+                for (const dir of ["Paintings", "Floors", "Wallpapers"]) {
+                    let files = Object.keys(Squeak.dirList(userArt + "/" + dir)).length;
+                    if (dir === "Paintings") files /= 2; // reading frontside only
+                    count += files;
+                 }
+            }
+            const progressbar = document.getElementById("progress");
+            progressbar.max = (count || 198) + 5; // +5 so it feels faster
+            let progressValue = 0;
+            const showProgress = function(name) {
+                progressbar.value = ++progressValue;
+                progress.style.display = "block";
+            };
+            const { fileGet, filePut } = Squeak;
+            Squeak.fileGet = function(name, ...args) {
+                showProgress(name);
+                return fileGet.call(Squeak, name, ...args);
+            }
+            Squeak.filePut = function(name, ...args) {
+                showProgress(name);
+                return filePut.call(Squeak, name, ...args);
+            }
+            // hide progress bar when intro video starts playing
+            window.sqVideoCallback = function() {
+                progress.style.display = "none";
+                Squeak.fileGet = fileGet;
+                Squeak.filePut = filePut;
+                PloppVideo.onclick = null;
+                delete window.sqVideoCallback;
+            };
         }
 
         function setupAudioVideo() {
