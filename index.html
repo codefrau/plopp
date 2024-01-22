@@ -113,12 +113,14 @@
                 return filePut.call(Squeak, name, ...args);
             }
             // hide progress bar when intro video starts playing
-            window.sqVideoCallback = function() {
+            window.sqVideoCallback = function(player, event) {
                 progress.style.display = "none";
                 Squeak.fileGet = fileGet;
                 Squeak.filePut = filePut;
-                PloppVideo.onclick = null;
-                delete window.sqVideoCallback;
+                if (player === PloppVideo && event === "close") {
+                    delete window.sqVideoCallback;
+                    PloppVideo.onclick = null;
+                }
             };
         }
 
@@ -137,6 +139,20 @@
             const audioNode = audioCtx.createMediaElementSource(PloppAudio);
             audioNode.connect(audioCtx.destination);
             PloppAudio.play();
+            // generate an ESC key even when clicking the video
+            // so we can skip the intro video
+            PloppVideo.onclick = e => {
+                const { display } = SqueakJS.vm.primHandler;
+                display.eventQueue.push([
+                    Squeak.EventTypeKeyboard,
+                    e.timestamp,
+                    27, // MacRoman
+                    Squeak.EventKeyChar,
+                    display.buttons >> 3,
+                    27, // Unicode
+                ]);
+                display.signalInputEvent();
+            };
         }
 
         function unixRuntime() {
