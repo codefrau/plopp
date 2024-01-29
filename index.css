@@ -70,16 +70,12 @@ progress {color: #f90;}
     border-radius: 50%;
     border: 1vw solid #f90;
 }
-canvas.b3daccel,
 video {
     position: absolute;
     left: 0px;
     top: 0px;
     width: 100%;
     height: 100%;
-}
-canvas.b3daccel {
-    object-fit: contain;
 }
 canvas {
     position: fixed;
