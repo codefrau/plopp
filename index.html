@@ -99,18 +99,18 @@
             const progressbar = document.getElementById("progress");
             progressbar.max = (count || 198) + 5; // +5 so it feels faster
             let progressValue = 0;
-            const showProgress = function(name) {
+            const showProgress = function(path) {
                 progressbar.value = ++progressValue;
                 progress.style.display = "block";
             };
             const { fileGet, filePut } = Squeak;
-            Squeak.fileGet = function(name, ...args) {
-                showProgress(name);
-                return fileGet.call(Squeak, name, ...args);
+            Squeak.fileGet = function(path, ...args) {
+                showProgress(path);
+                return fileGet.call(Squeak, path, ...args);
             }
-            Squeak.filePut = function(name, ...args) {
-                showProgress(name);
-                return filePut.call(Squeak, name, ...args);
+            Squeak.filePut = function(path, ...args) {
+                showProgress(path);
+                return filePut.call(Squeak, path, ...args);
             }
             // hide progress bar when intro video starts playing
             window.sqVideoCallback = function(player, event) {
@@ -120,6 +120,21 @@
                 if (player === PloppVideo && event === "close") {
                     delete window.sqVideoCallback;
                     PloppVideo.onclick = null;
+                    // set up file download when writing to user/Plopp/
+                    Squeak.filePut = function(path, data, ...args) {
+                        if (path.startsWith("/Plopp/user/Plopp/") && data.byteLength > 0) {
+                            console.log("downloading", path);
+                            const file = path.replace(/.*\//, "");
+                            const blob = new Blob([data], {type: file.endsWith(".jpg") ? "image/jpeg" : "application/octet-stream"});
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = file;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }
+                        return filePut.call(Squeak, path, data, ...args);
+                    };
                 }
             };
         }
