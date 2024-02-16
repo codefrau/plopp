@@ -31,7 +31,7 @@ function PloppMpeg3Plugin() {
             var pathObj = this.interpreterProxy.stackObjectValue(0);
             var path = pathObj.bytesAsString();
             // hack to find mp4 in Plopp directory
-            path = path.replace(/.*\/Plopp\//, "Contents/Resources/");
+            path = path.replace(/.*\/Plopp(Dev)?\//, "Contents/Resources/");
             path = path.replace(/\.mpg$/, ".mp4");
             var isAudio = path.match(/\.mp3$/);
             // We use PloppAudio or PloppVideo which have been
