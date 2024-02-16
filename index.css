@@ -96,6 +96,7 @@ div#sqSpinner {
     box-shadow: 0 0 5px 5px #F90;
     display: none;
     transform: rotate(30deg);
+    z-index: 100;
 }
 div#sqSpinner > div {
     position: absolute;
